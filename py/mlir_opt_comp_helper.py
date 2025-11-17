@@ -225,7 +225,7 @@ def parse_help(text: str) -> List[OptionRecord]:
             current is not None
             and last_pass_indent is not None
             and indent == last_pass_indent + 2
-            and stripped.startswith("--")
+            and stripped.startswith("-")
         )
         if is_pass_option:
             pass_opt_name = name.lstrip("-")
