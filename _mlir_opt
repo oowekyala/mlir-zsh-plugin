@@ -1,0 +1,132 @@
+#compdef tilefirst-opt mlir-opt
+
+# Completion script for mlir-opt. This parses the --help text of MLIR and:
+# - Filters out irrelevant LLVM options (zstyle TODO)
+# - Adds completion docs for pass options and their values
+# The output of parsing the help text is cached to make completions faster.
+# - Disable the cache with zstyle TODO
+# - Clean the cache with _mlir_opt_clear_completion_cache (you need to have loaded this file first)
+#
+# The main completion function _mlir_opt can be used with any mlir-opt-like program.
+# For instance:
+#     compdef _mlir_opt mlir-opt cinm-opt iree-opt
+# will register it for more executables.
+
+
+__mlir_opt_comp_helper_path() {
+    if (( $+functions_source[_mlir_opt] )); then
+        local src=${functions_source[_mlir_opt]}
+        if [[ -n $src ]]; then
+            print -r -- "${src:h}/py/mlir_opt_comp_helper.py"
+            return 0
+        fi
+    fi
+    return 1
+}
+
+__mlir_opt_comp_helper_call() {
+    local helper=$1
+    shift
+    local -a args
+    if [[ -n $MLIR_OPT_COMP_CMD ]]; then
+        args+=(--cmd "$MLIR_OPT_COMP_CMD")
+    fi
+    # args+=(--no-cache)
+    args+=("$@")
+    "$helper" "${args[@]}"
+}
+
+__mlir_opt_comp_values() {
+    local helper=$1 base=$2
+    local output
+    output=$(__mlir_opt_comp_helper_call "$helper" list-values "$base" 2>/dev/null) || return 1
+    [[ -z $output ]] && return 1
+
+    local -a entries value_specs
+    entries=(${(0)output})
+    local field_sep=$'\x1f'
+    local entry
+    for entry in "${entries[@]}"; do
+        local -a parts
+        parts=(${(ps:$field_sep:)entry})
+        local value=${parts[1]}
+        local desc=${parts[2]}
+        [[ -z $value ]] && continue
+        desc=${desc//:/\\:}
+        value_specs+=("$value:$desc")
+    done
+    (( ${#value_specs} )) || return 1
+    _describe -t mlir-opt-values "values for $base" value_specs -Q
+}
+
+__mlir_opt_comp_pass_options() {
+    local helper=$1 
+    local output pass_name
+
+    pass_name=${${(Q)PREFIX}%%=*}
+    compset -P 1 '*='
+    # The rest of the prefix is now just the options part, it 
+    # may itself contain spaces and/or an equal sign.
+
+    output=$(__mlir_opt_comp_helper_call "$helper" list-pass-options -- "$pass_name" 2>/dev/null) || return 1
+    [[ -z $output ]] && return 1
+
+    local -a specs
+    specs=(${(0)output})
+    (( ${#specs[@]} )) || return 1
+    _values -s ' ' "Options for $pass_name" "${specs[@]}"
+}
+
+# Delete the space when typing = after an option name, allows typing pass options 
+_mlir_opt_comp_equal_handler() {
+    [[ $1 = 1 && $LBUFFER[-1] = ' ' && $KEYS = '=' ]] || return
+    LBUFFER="${LBUFFER[1,-2]}="
+}
+
+_mlir_pass_opt_suffix_handler() {
+  # ZLE completion widget invoked after inserting a pass name. If the user
+  # types an '=', the space added after the pass name will be deleted to place
+  # ourselves in pass options context.
+  [[ $1 = 1 ]] || return
+
+  if [[ $LBUFFER[-1] = ' ' ]]; then
+    if [[ $KEYS = '=' ]]; then
+      # Suffix removal 
+      LBUFFER="$LBUFFER[1,-2]"
+    elif [[ $KEYS = (*[^[:print:]]*|[[:blank:]\;\&\|@]) ]]; then
+      # Normal suffix removal
+      LBUFFER="$LBUFFER[1,-2]"
+    fi
+  fi
+}
+
+_mlir_opt_clear_completion_cache() {
+  local helper=$(__mlir_opt_comp_helper_path)
+  __mlir_opt_comp_helper_call "$helper" clean-cache
+}
+
+_mlir_opt() {
+    local helper=$(__mlir_opt_comp_helper_path)
+    [[ -x $helper ]] || return 1
+
+    if [[ "$PREFIX" = *=* ]]; then
+      __mlir_opt_comp_pass_options "$helper"
+      return
+    fi
+
+    local output
+    output=$(__mlir_opt_comp_helper_call "$helper" list-options 2>/dev/null) || return 1
+    [[ -z $output ]] && return 1
+
+    local -a arg_specs
+    arg_specs=(${(0)output})
+    arg_specs+=('*:file:_files')
+
+    local context state state_descr line
+    typeset -A opt_args
+
+    local -a compadd_args=(-R _mlir_pass_opt_suffix_handler)
+
+    _arguments -R -S -O compadd_args : "${arg_specs[@]}" && return 0
+
+}
