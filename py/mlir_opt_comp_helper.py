@@ -19,11 +19,9 @@ import sys
 from enum import Enum
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 
-ENTRY_SEP = "\0"
-FIELD_SEP = "\x1f"
 DEFAULT_COMMAND = "tilefirst-opt"
 CACHE_BASENAME = "mlir_opt_comp_cache.json"
 
@@ -37,7 +35,7 @@ class Choice:
 class OptionCategory(Enum):
   GENERIC = 1 # --color, --help
   MLIR_OPTION = 2 # --mlir-*
-  MLIR_PASS = 3 
+  MLIR_PASS = 3
   MLIR_PASS_PIPELINE = 4
   LLVM = 5 # ignored
 
@@ -46,8 +44,7 @@ class OptionCategory(Enum):
 class OptionRecord:
     """mlir-opt option"""
     name: str
-    category: OptionCategory 
-    insert_text: str
+    category: OptionCategory
     style: str  # flag | attached | separate
     description: str
     value_hint: str = ""
@@ -59,7 +56,6 @@ class OptionRecord:
 class PassOption:
     """One option of an MLIR pass"""
     name: str
-    insert_text: str
     style: str
     description: str
     value_hint: str = ""
@@ -68,8 +64,7 @@ class PassOption:
 
 def sanitize(text: str) -> str:
     text = text.strip()
-    text = re.sub(r"\s+", " ", text)
-    return text.replace(FIELD_SEP, " ")
+    return re.sub(r"\s+", " ", text)
 
 
 def find_command(cmd: str) -> str:
@@ -161,9 +156,8 @@ class HelpState(Enum):
 
 def parse_help(text: str) -> List[OptionRecord]:
     options: List[OptionRecord] = []
-    current: Optional[PassOption] = None
+    current: Optional[PassOption | OptionRecord] = None
     current_opt: Optional[OptionRecord] = None
-    last_type: Optional[str] = None
     last_pass_indent: Optional[int] = None
     state: HelpState = HelpState.GENERAL_LLVM
 
@@ -171,7 +165,7 @@ def parse_help(text: str) -> List[OptionRecord]:
     for raw_line in lines:
         stripped = raw_line.lstrip()
         if not stripped:
-            last_type = "blank"
+            # blank line
             last_pass_indent = None
             continue
 
@@ -181,14 +175,13 @@ def parse_help(text: str) -> List[OptionRecord]:
           state = HelpState.GENERAL_LLVM
 
         if stripped.startswith("="):
-            if current_opt is None:
+            if current is None:
                 continue
             value_part, _, desc_part = stripped.partition("-")
             value = sanitize(value_part.lstrip("=") )
             desc = sanitize(desc_part)
             if value:
-                current_opt.choices.append(Choice(value=value, description=desc))
-            last_type = "choice"
+                current.choices.append(Choice(value=value, description=desc))
             continue
 
         if not stripped.startswith("-"):
@@ -201,7 +194,6 @@ def parse_help(text: str) -> List[OptionRecord]:
             state = state.new_state_on_header(stripped)
             current = None
             current_opt = None
-            last_type = "other"
             last_pass_indent = None
             continue
 
@@ -209,7 +201,6 @@ def parse_help(text: str) -> List[OptionRecord]:
         if not sep:
             current = None
             current_opt = None
-            last_type = "other"
             continue
 
         option_part = before_desc.strip()
@@ -222,7 +213,7 @@ def parse_help(text: str) -> List[OptionRecord]:
             continue
 
         is_pass_option = (
-            current is not None
+            current_opt is not None
             and last_pass_indent is not None
             and indent == last_pass_indent + 2
             and stripped.startswith("-")
@@ -231,27 +222,23 @@ def parse_help(text: str) -> List[OptionRecord]:
             pass_opt_name = name.lstrip("-")
             if not pass_opt_name:
                 continue
-            current_opt = PassOption(
+            current = PassOption(
                 name=pass_opt_name,
-                insert_text=pass_opt_name, # = insertion handled by zsh
                 style=style,
                 description=description,
                 value_hint=value_hint,
             )
-            current.sub_options.append(current_opt)
-            last_type = "pass-option"
+            current_opt.sub_options.append(current)
             continue
 
-        current = OptionRecord(
+        current_opt = OptionRecord(
             name=name,
             category=state.category(name),
-            insert_text=insert_text,
             style=style,
             description=description,
             value_hint=value_hint,
         )
-        options.append(current)
-        last_type = "option"
+        options.append(current_opt)
         last_pass_indent = indent
         continue
 
@@ -288,21 +275,43 @@ def decode_option(option_part: str) -> tuple[str, str, str, str]:
     name = name.rstrip(",")
     return name, insert_text, style, value_hint
 
+zsh_array = str
+"""0-delimited string with ZSH-escaped data for each entry"""
 
-def build_payload(binary: str) -> Dict[str, Any]:
+def to_zsh_array(entries: Iterable[str]) -> zsh_array:
+    return '\0'.join(entries)
+
+@dataclass
+class ZshPayload:
+  # 0-delimited string with an optspec (for the _arguments command) per option
+  option_specs: zsh_array
+  pass_options: Dict[str, zsh_array]
+  # full_data: dict
+
+def build_payload(binary: str) -> ZshPayload:
     help_text = run_help(binary)
-    options = parse_help(help_text)
-    return {
-        "options": [
-            asdict(opt) for opt in options
-        ]
-    }
+    options: list[OptionRecord] = parse_help(help_text)
+
+    return ZshPayload(
+      option_specs = to_zsh_array(
+        to_zsh_optspec(opt)
+        for opt in options
+        if opt.category != OptionCategory.LLVM
+      ),
+      pass_options = {
+        opt.name: to_zsh_array(
+          to_zsh_value(sub)
+          for sub in opt.sub_options
+        )
+        for opt in options
+        if opt.category != OptionCategory.LLVM
+      }
+    )
 
 
-def get_data(binary: str, use_cache: bool = True) -> Dict[str, Any]:
+def get_data(binary: str, use_cache: bool = True) -> ZshPayload:
     cache_file = cache_path()
     cache = load_cache(cache_file) if use_cache else None
-    mtime = None
     try:
         mtime = os.path.getmtime(binary)
     except OSError:
@@ -314,7 +323,7 @@ def get_data(binary: str, use_cache: bool = True) -> Dict[str, Any]:
         and cache.get("mtime") == mtime
         and "payload" in cache
     ):
-        return cache["payload"]
+        return ZshPayload(**cache["payload"])
 
     payload = build_payload(binary)
 
@@ -324,22 +333,17 @@ def get_data(binary: str, use_cache: bool = True) -> Dict[str, Any]:
             {
                 "binary": binary,
                 "mtime": mtime,
-                "payload": payload,
+                "payload": asdict(payload),
             },
         )
 
     return payload
 
 
-def emit_entries(entries: Iterable[List[str]]):
-    chunks = [FIELD_SEP.join(parts) for parts in entries]
-    sys.stdout.write(ENTRY_SEP.join(chunks))
-
-
 def esc(s, d=1):
   return s.replace(':', '\\' * d + ':')
 
-def option_to_values(opt: OptionRecord | PassOption) -> (str, str):
+def option_to_values(opt: OptionRecord | PassOption) -> Tuple[str, str]:
   hint = opt.value_hint or ""
   hint = hint.lstrip('<').rstrip('>')
   if hint == "value":
@@ -347,9 +351,9 @@ def option_to_values(opt: OptionRecord | PassOption) -> (str, str):
 
   if len(opt.choices) > 0:
     values = ' '.join([
-      f"{choice["value"]}\\:{esc(choice["description"].strip().replace(' ', '\\ '), d=2)}"
+      choice.value + ':' + esc(choice.description.strip().replace(' ', '\\ '), d=2)
       for choice in opt.choices
-    ]) 
+    ])
     values = f"(({values}))"
   elif hint in ("number", "int", "long"):
     values = "_numbers"
@@ -357,8 +361,8 @@ def option_to_values(opt: OptionRecord | PassOption) -> (str, str):
     values = "_numbers -l 0"
   else:
     values = ""
-  
-  return (hint, values)
+
+  return hint, values
 
 
 def to_zsh_optspec(opt: OptionRecord):
@@ -366,34 +370,12 @@ def to_zsh_optspec(opt: OptionRecord):
 
   repeatable = opt.category in (OptionCategory.MLIR_PASS, OptionCategory.MLIR_PASS_PIPELINE)
 
-  repetitionstar = '*' if repeatable else ''
-  passoptsep = '=-' if len(opt.choices) > 0 or len(opt.sub_options) > 0 else ''
+  repetition_star = '*' if repeatable else ''
+  pass_opt_sep = '=-' if len(opt.choices) > 0 or len(opt.sub_options) > 0 else ''
   descr = esc(opt.description).replace(']', '\\]')
 
-  return f"{repetitionstar}{opt.name}{passoptsep}[{descr}]:{esc(hint)}:{values}"
+  return f"{repetition_star}{opt.name}{pass_opt_sep}[{descr}]:{esc(hint)}:{values}"
 
-
-def cmd_list_options(data: dict):
-    entries = []
-    # print(data)
-    for opt in data.get("options", []):
-      record = OptionRecord(**opt)
-      if record.category == OptionCategory.LLVM:
-        continue
-      entries.append([ to_zsh_optspec(record) ])
-    emit_entries(entries)
-
-
-def cmd_list_values(data: dict, option_name: str):
-    for opt in data.get("options", []):
-        if opt["name"] == option_name:
-            entries = [
-                [choice["value"], choice.get("description", "")]
-                for choice in opt.get("choices", [])
-            ]
-            emit_entries(entries)
-            return
-    emit_entries([])
 
 def to_zsh_value(opt: PassOption):
   if opt.style == 'flag':
@@ -403,27 +385,15 @@ def to_zsh_value(opt: PassOption):
   return f"{opt.name}[{esc(opt.description)}]:{esc(hint)}:{values}"
 
 
-def cmd_list_pass_options(data: dict, option_name: str):
-    for opt in data.get("options", []):
-        if opt["name"] == option_name:
-            entries = [
-                [to_zsh_value(PassOption(**sub))]
-                for sub in opt.get("sub_options", [])
-            ]
-            emit_entries(entries)
-            return
-    emit_entries([])
-
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "mode",
         choices=[
             "list-options",
-            "list-values",
             "list-pass-options",
             "clean-cache",
+            "print-cache-file",
         ],
     )
     parser.add_argument("option", nargs="?")
@@ -448,6 +418,9 @@ def main() -> int:
     args = parse_args()
     if args.mode == "clean-cache":
         return cmd_clean_cache()
+    if args.mode == "print-cache-file":
+        print(cache_path())
+        return 0
 
     command = (
         args.cmd
@@ -460,21 +433,18 @@ def main() -> int:
         return 0
 
     try:
-        data = get_data(binary, use_cache=not args.no_cache)
+        data: ZshPayload = get_data(binary, use_cache=not args.no_cache)
     except Exception as exc:
         print(exc, file=sys.stderr)
         return 1
 
     if args.mode == "list-options":
-        cmd_list_options(data)
-    elif args.mode == "list-values":
-        if not args.option:
-            return 1
-        cmd_list_values(data, args.option)
+        sys.stdout.write(data.option_specs)
     elif args.mode == "list-pass-options":
         if not args.option:
             return 1
-        cmd_list_pass_options(data, args.option)
+        opt_info = data.pass_options.get(args.option) or ""
+        sys.stdout.write(opt_info)
     return 0
 
 

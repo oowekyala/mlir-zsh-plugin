@@ -36,29 +36,6 @@ __mlir_opt_comp_helper_call() {
     "$helper" "${args[@]}"
 }
 
-__mlir_opt_comp_values() {
-    local helper=$1 base=$2
-    local output
-    output=$(__mlir_opt_comp_helper_call "$helper" list-values "$base" 2>/dev/null) || return 1
-    [[ -z $output ]] && return 1
-
-    local -a entries value_specs
-    entries=(${(0)output})
-    local field_sep=$'\x1f'
-    local entry
-    for entry in "${entries[@]}"; do
-        local -a parts
-        parts=(${(ps:$field_sep:)entry})
-        local value=${parts[1]}
-        local desc=${parts[2]}
-        [[ -z $value ]] && continue
-        desc=${desc//:/\\:}
-        value_specs+=("$value:$desc")
-    done
-    (( ${#value_specs} )) || return 1
-    _describe -t mlir-opt-values "values for $base" value_specs -Q
-}
-
 __mlir_opt_comp_pass_options() {
     local helper=$1 
     local output pass_name
@@ -74,7 +51,7 @@ __mlir_opt_comp_pass_options() {
     local -a specs
     specs=(${(0)output})
     (( ${#specs[@]} )) || return 1
-    _values -s ' ' "Options for $pass_name" "${specs[@]}"
+    _values -s ' ' "pass options for $pass_name" "${specs[@]}"
 }
 
 # Delete the space when typing = after an option name, allows typing pass options 
