@@ -60,6 +60,14 @@ _mlir_opt_clear_completion_cache() {
 }
 
 _mlir_opt() {
+    if [[ ${words[1]} = 'wrap_mlir_opt_with_colors' && ${#words} -ge 2 ]]; then
+      local cmd=${words[2]} # Second word is the command name
+      export MLIR_OPT_COMP_CMD=$(__find_mlir_opt_cmd "$cmd")
+      [[ -n "$MLIR_OPT_COMP_CMD" ]] || return 1
+    else
+      export MLIR_OPT_COMP_CMD=${words[1]}
+    fi
+
     local helper=$(__mlir_opt_comp_helper_path)
     [[ -x $helper ]] || return 1
 
