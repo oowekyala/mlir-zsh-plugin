@@ -1,6 +1,4 @@
-
-
-
+#!/bin/zsh
 
 autoload -Uz pygmentize_mlir
 

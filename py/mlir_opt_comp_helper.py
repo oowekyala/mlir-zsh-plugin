@@ -177,7 +177,7 @@ def parse_help(text: str) -> List[OptionRecord]:
         if stripped.startswith("="):
             if current is None:
                 continue
-            value_part, _, desc_part = stripped.partition("-")
+            value_part, _, desc_part = stripped.partition("- ")
             value = sanitize(value_part.lstrip("=") )
             desc = sanitize(desc_part)
             if value:
@@ -350,11 +350,15 @@ def option_to_values(opt: OptionRecord | PassOption) -> Tuple[str, str]:
     hint = f"{opt.name} value"
 
   if len(opt.choices) > 0:
-    values = ' '.join([
-      choice.value + ':' + esc(choice.description.strip().replace(' ', '\\ '), d=2)
-      for choice in opt.choices
-    ])
-    values = f"(({values}))"
+    if not any(choice.description.strip() for choice in opt.choices):
+        # No description
+        values = f"({' '.join(choice.value for choice in opt.choices)})"
+    else:
+        values = ' '.join(
+          choice.value + ':' + (esc(choice.description.strip().replace(' ', '\\ '), d=2) or "no description")
+          for choice in opt.choices
+        )
+        values = f"(({values}))"
   elif hint in ("number", "int", "long"):
     values = "_numbers"
   elif hint in ("uint", "ulong"):
@@ -399,6 +403,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("option", nargs="?")
     parser.add_argument("--cmd", dest="cmd")
     parser.add_argument("--no-cache", action="store_true")
+    parser.add_argument("--nl-delimited", action="store_true")
     return parser.parse_args()
 
 
@@ -438,13 +443,18 @@ def main() -> int:
         print(exc, file=sys.stderr)
         return 1
 
+    def emit_array(arr: zsh_array):
+        if args.nl_delimited:
+            arr = arr.replace('\0', '\n')
+        sys.stdout.write(arr)
+
     if args.mode == "list-options":
-        sys.stdout.write(data.option_specs)
+        emit_array(data.option_specs)
     elif args.mode == "list-pass-options":
         if not args.option:
             return 1
         opt_info = data.pass_options.get(args.option) or ""
-        sys.stdout.write(opt_info)
+        emit_array(opt_info)
     return 0
 
 

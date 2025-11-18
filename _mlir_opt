@@ -54,29 +54,6 @@ __mlir_opt_comp_pass_options() {
     _values -s ' ' "pass options for $pass_name" "${specs[@]}"
 }
 
-# Delete the space when typing = after an option name, allows typing pass options 
-_mlir_opt_comp_equal_handler() {
-    [[ $1 = 1 && $LBUFFER[-1] = ' ' && $KEYS = '=' ]] || return
-    LBUFFER="${LBUFFER[1,-2]}="
-}
-
-_mlir_pass_opt_suffix_handler() {
-  # ZLE completion widget invoked after inserting a pass name. If the user
-  # types an '=', the space added after the pass name will be deleted to place
-  # ourselves in pass options context.
-  [[ $1 = 1 ]] || return
-
-  if [[ $LBUFFER[-1] = ' ' ]]; then
-    if [[ $KEYS = '=' ]]; then
-      # Suffix removal 
-      LBUFFER="$LBUFFER[1,-2]"
-    elif [[ $KEYS = (*[^[:print:]]*|[[:blank:]\;\&\|@]) ]]; then
-      # Normal suffix removal
-      LBUFFER="$LBUFFER[1,-2]"
-    fi
-  fi
-}
-
 _mlir_opt_clear_completion_cache() {
   local helper=$(__mlir_opt_comp_helper_path)
   __mlir_opt_comp_helper_call "$helper" clean-cache
@@ -102,7 +79,7 @@ _mlir_opt() {
     local context state state_descr line
     typeset -A opt_args
 
-    local -a compadd_args=(-R _mlir_pass_opt_suffix_handler)
+    local -a compadd_args=()#(-R _mlir_pass_opt_suffix_handler)
 
     _arguments -R -S -O compadd_args : "${arg_specs[@]}" && return 0
 

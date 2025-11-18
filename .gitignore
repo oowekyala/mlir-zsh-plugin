@@ -1,5 +1,6 @@
 __pycache__/
 *.zwc
 *.zwc.old
+.idea
 
 
