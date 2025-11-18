@@ -2,7 +2,6 @@
 
 # Config through zstyle:
 # - ':plugins:mlir:wrapper' colorized_output  (default true)
-# - ':plugins:mlir:wrapper' search_build_dir  (default false)
 # - ':plugins:mlir:wrapper' enabled  (default true)
 # - ':plugins:mlir' mlir_opt_programs (default mlir-opt) (array) 
 
@@ -20,12 +19,6 @@ function wrap_mlir_opt_with_colors() {
   local cmd="$1"
   shift
 
-  cmd=$(__find_mlir_opt_cmd "$cmd")
-  if [[ -z "$cmd" ]]; then
-    echo "$cmd could not be found"
-    return 1
-  fi
-
   if zstyle -T ':plugins:mlir:wrapper' colorized_output; then
     command "$cmd" "$@" | pygmentize_mlir
   else
@@ -42,7 +35,7 @@ fi
 
 # Compdef for MLIR
 compdef _mlir_opt ${mlir_opt_programs[@]} 
-compdef _mlir_opt wrap_mlir_opt_with_colors
+compdef _precommand wrap_mlir_opt_with_colors
 
 # TODO 
 #  - document how to set the lexer for pygments
