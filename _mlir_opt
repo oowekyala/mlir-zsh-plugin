@@ -79,8 +79,6 @@ _mlir_opt() {
     local context state state_descr line
     typeset -A opt_args
 
-    local -a compadd_args=()#(-R _mlir_pass_opt_suffix_handler)
-
-    _arguments -R -S -O compadd_args : "${arg_specs[@]}" && return 0
+    _arguments -S : "${arg_specs[@]}" 
 
 }
