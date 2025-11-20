@@ -14,20 +14,12 @@ autoload -Uz pygmentize_mlir
 autoload -Uz __find_mlir_opt_cmd
 
 # A function to wrap an MLIR frontend command with colorized output.
-
 function wrap_mlir_opt_with_colors() {
-  local cmd="$1"
-  shift
-
-  if zstyle -T ':plugins:mlir:wrapper' colorized_output; then
-    command "$cmd" "$@" | pygmentize_mlir
-  else
-    command "$cmd" "$@"
-  fi
+  command "$@" | pygmentize_mlir
 }
 
 
-if zstyle -T ':plugins:mlir:wrapper' enabled; then
+if zstyle -T ':plugins:mlir:pygments' enabled; then
   for prog in ${mlir_opt_programs[@]}; do
     alias $prog="wrap_mlir_opt_with_colors $prog"
   done

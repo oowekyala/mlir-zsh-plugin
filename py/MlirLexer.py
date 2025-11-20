@@ -112,30 +112,27 @@ class CustomLexer(RegexLexer):
             (fr'{bare_id}', Name.Identifier),
         ],
 
-        'tfl': [
-            (r'\b(fill_buf|empty_buf|transfer|kill_buffer|tile|scope|kernel|return|gather|yield|reduce|schedule)\b', Name.Function),
-            (r'\b((hw)?parallel|vectorized|reduction|rankreduce|factor|attributes|ranks|tasklets|dpus|into|threaded|ins|outs|sdim|symbolic|dim|by|scheduler|variables|platform|par|red|to|with)\b', Keyword.Declaration),
+        'custom_ops': [
+            # Add custom syntax for your dialects here.
+            # You usually only need the following if you use OpAsmInterface to have an implicit dialect name. If you always
+            # write your ops with a dialect prefix then they will be highlighted correctly.
+            (r'\b(fill_buf|empty_buf|transfer|kill_buffer|tile|scope|kernel|gather|yield|reduce|schedule)\b', Name.Function),
+            # The following is for keywords that appear in the custom syntax of your ops. 
+            (r'\b((hw)?parallel|vectorized|reduction|rankreduce|factor|ranks|tasklets|dpus|into|threaded|ins|outs|sdim|symbolic|dim|by|scheduler|variables|platform|par|red|with)\b', Keyword.Declaration),
+        ],
+
+        'builtin_ops': [
+            (r'\b(module|return)\b', Name.Function),
+            (r'\b(attributes|to|with|upto)\b', Keyword.Declaration),
         ],
 
         'root': [
-            include('tfl'),
+            include('custom_ops'),
+            include('builtin_ops'),
             include('sigils'),
             include('punctuation'),
             include('literals'),
             include('comments'),
         ]
     }
-
-
-class MlirSuperLexer(Lexer):
-    name = 'MLIR'
-    aliases = ['mlir']
-    filenames = ['*.mlir']
-
-    def __init__(self, **options):
-        super(MlirSuperLexer, self).__init__(**options)
-
-    def get_tokens_unprocessed(self, text):
-        pass
-
 
