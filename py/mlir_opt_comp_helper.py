@@ -321,7 +321,7 @@ def get_data(binary: str, use_cache: bool = True) -> ZshPayload:
     payload = None
 
     # Match for the same binary
-    if (bincache := cache.get("binary")) and "payload" in bincache:
+    if (bincache := cache.get(binary)) and "payload" in bincache:
       payload = ZshPayload(**bincache["payload"])
 
       if bincache.get("mtime") == mtime:
