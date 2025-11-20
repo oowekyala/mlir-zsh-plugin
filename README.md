@@ -27,7 +27,7 @@ To use the pygments syntax highlighter, you also need to install [Pygments](http
 Many Linux distributions (and Homebrew for Mac) ship it as a package named `pygments` or `python-pygments` with their package manager.
 Try this to see if you have it installed:
 ```zsh
-pygmentize -v
+pygmentize -V
 ```
 If not, install using one of those for instance:
 ```zsh

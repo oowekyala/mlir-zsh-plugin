@@ -383,17 +383,18 @@ def to_zsh_optspec(opt: OptionRecord):
 
   repetition_star = '*' if repeatable else ''
   pass_opt_sep = '=-' if len(opt.choices) > 0 or len(opt.sub_options) > 0 else ''
-  descr = esc(opt.description).replace(']', '\\]')
+  descr = esc(opt.description, chars=':[]')
 
   return f"{repetition_star}{opt.name}{pass_opt_sep}[{descr}]:{esc(hint)}:{values}"
 
 
 def to_zsh_value(opt: PassOption):
+  descr = esc(opt.description, chars=':[]')
   if opt.style == 'flag':
-    return f"{opt.name}[{esc(opt.description)}]"
+    return f"{opt.name}[{descr}]"
 
   hint, values = option_to_values(opt)
-  return f"{opt.name}[{esc(opt.description)}]:{esc(hint)}:{values}"
+  return f"{opt.name}[{descr}]:{esc(hint)}:{values}"
 
 
 def parse_args() -> argparse.Namespace:

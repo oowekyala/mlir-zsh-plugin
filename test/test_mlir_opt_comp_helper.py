@@ -43,25 +43,23 @@ def test_pass_options_affine_data_copy_contains_expected_suboptions(payload):
     assert entries, "expected pass options for --affine-data-copy-generate"
     assert any(entry.startswith("fast-mem-capacity") for entry in entries)
 
-
-def test_pass_options_affine_loop_tile_has_tile_size(payload):
-    pass_opts = payload.pass_options.get("--affine-loop-tile", "")
+def get_entry(payload, pass_name, option_name):
+    pass_opts = payload.pass_options.get(pass_name, "")
     entries = pass_opts.split("\0") if pass_opts else []
-    assert entries, "expected pass options for --affine-loop-tile"
-    assert any(entry.startswith("tile-size") for entry in entries)
+    for entry in entries:
+      if entry.startswith(option_name):
+        return entry
+    assert False and f"Entry not found {option_name} for {pass_name}"
+
 
 def test_escape_value_description_that_has_paren(payload):
-    pass_opts = payload.pass_options.get("--convert-complex-to-llvm", "")
-    entries = pass_opts.split("\0") if pass_opts else []
-    assert entries, "expected pass options for --affine-loop-tile"
-    for entry in entries:
-      if entry.startswith("complex-range"):
-        assert entry == "complex-range[Control the intermediate calculation of complex number division]:complex-range value:((improved:improved basic:basic\\ \\(default\\) none:none))"
+    entry = get_entry(payload, "--convert-complex-to-llvm", "complex-range")
+    assert entry == r"complex-range[Control the intermediate calculation of complex number division]:complex-range value:((improved:improved basic:basic\ \(default\) none:none))"
 
 def test_value_list_no_description(payload):
-    pass_opts = payload.pass_options.get("--one-shot-bufferize", "")
-    entries = pass_opts.split("\0") if pass_opts else []
-    assert entries, "expected pass options for --affine-loop-tile"
-    for entry in entries:
-      if entry.startswith("unknown-type-conversion"):
-        assert entry == "unknown-type-conversion[Controls layout maps for non-inferrable memref types.]:unknown-type-conversion value:(infer-layout-map identity-layout-map fully-dynamic-layout-map)"
+    entry = get_entry(payload, "--one-shot-bufferize", "unknown-type-conversion")
+    assert entry == "unknown-type-conversion[Controls layout maps for non-inferrable memref types.]:unknown-type-conversion value:(infer-layout-map identity-layout-map fully-dynamic-layout-map)"
+
+def test_value_list_descr_with_brackets(payload):
+    entry = get_entry(payload, "--linalg-block-pack-matmul", "lhs-transpose-inner-blocks")
+    assert entry == r"lhs-transpose-inner-blocks[Transpose LHS inner block layout \[mb\]\[kb\] -> \[kb\]\[mb\]]"

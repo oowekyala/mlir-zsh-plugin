@@ -5,6 +5,7 @@
 # - ':plugins:mlir:wrapper' enabled  (default true)
 # - ':plugins:mlir' mlir_opt_programs (default mlir-opt) (array) 
 
+
 local mlir_opt_programs
 zstyle -a ':plugins:mlir' mlir_opt_programs mlir_opt_programs
 ((${mlir_opt_programs:=mlir-opt})) # default value
@@ -21,12 +22,12 @@ function wrap_mlir_opt_with_colors() {
   fi
 }
 
-
-if zstyle -T ':plugins:mlir:pygments' enabled; then
-  for prog in ${mlir_opt_programs[@]}; do
+for prog in ${mlir_opt_programs[@]}; do
+  if zstyle -T ':plugins:mlir:pygments' enabled; then
     alias $prog="wrap_mlir_opt_with_colors $prog"
-  done
-fi
+  fi
+  zstyle ":completion::complete:$prog:"'values*' menu yes
+done
 
 # Compdef for MLIR
 compdef _mlir_opt ${mlir_opt_programs[@]} 
