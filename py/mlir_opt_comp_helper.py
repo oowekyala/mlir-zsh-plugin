@@ -345,8 +345,10 @@ def get_data(binary: str, use_cache: bool = True) -> ZshPayload:
     return payload
 
 
-def esc(s, d=1):
-  return s.replace(':', '\\' * d + ':')
+def esc(s, chars=':', d=1):
+  for c in chars:
+    s = s.replace(c, '\\' * d + c)
+  return s
 
 def option_to_values(opt: Union[OptionRecord, PassOption]) -> Tuple[str, str]:
   hint = opt.value_hint or ""
@@ -360,7 +362,7 @@ def option_to_values(opt: Union[OptionRecord, PassOption]) -> Tuple[str, str]:
         values = f"({' '.join(choice.value for choice in opt.choices)})"
     else:
         values = ' '.join(
-          choice.value + ':' + (esc(choice.description.strip().replace(' ', '\\ '), d=2) or "no description")
+          choice.value + ':' + (esc(esc(choice.description.strip(), chars=' ()'), chars=':', d=2) or "no description")
           for choice in opt.choices
         )
         values = f"(({values}))"
