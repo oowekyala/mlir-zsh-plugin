@@ -16,6 +16,7 @@ import re
 import shutil
 import subprocess
 import sys
+import hashlib
 from enum import Enum
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
@@ -288,8 +289,8 @@ class ZshPayload:
   pass_options: Dict[str, zsh_array]
   # full_data: dict
 
-def build_payload(binary: str) -> ZshPayload:
-    help_text = run_help(binary)
+def build_payload(help_text: str) -> ZshPayload:
+
     options: list[OptionRecord] = parse_help(help_text)
 
     return ZshPayload(
@@ -310,33 +311,39 @@ def build_payload(binary: str) -> ZshPayload:
 
 
 def get_data(binary: str, use_cache: bool = True) -> ZshPayload:
+    if not use_cache:
+        help_text = run_help(binary)
+        return build_payload(help_text)
+
     cache_file = cache_path()
-    cache = load_cache(cache_file) if use_cache else None
+    cache = load_cache(cache_file) or {}
     try:
         mtime = os.path.getmtime(binary)
     except OSError:
         mtime = None
 
-    if (
-        cache
-        and cache.get("binary") == binary
-        and cache.get("mtime") == mtime
-        and "payload" in cache
-    ):
-        return ZshPayload(**cache["payload"])
+    # Match for the same binary
+    if (bincache := cache.get("binary")) and "payload" in bincache:
+      payload = ZshPayload(**bincache["payload"])
 
-    payload = build_payload(binary)
+      if bincache.get("mtime") == mtime:
+        # Binary identical
+        return payload
 
-    if use_cache:
-        save_cache(
-            cache_file,
-            {
-                "binary": binary,
-                "mtime": mtime,
-                "payload": asdict(payload),
-            },
-        )
+      cached_checksum = bincache.get("checksum")
 
+    help_text = run_help(binary)
+    checksum = hashlib.sha256(help_text, usedforsecurity=False)
+
+    if cached_checksum != checksum or payload is None:
+      payload = build_payload(help_text)
+
+    cache[binary] = {
+      "mtime": mtime,
+      "payload": asdict(payload),
+      "checksum": checksum
+    }
+    save_cache(cache_file, cache)
     return payload
 
 

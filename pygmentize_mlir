@@ -15,7 +15,7 @@ __default_mlir_lexer() {
 
 #function pygmentize_mlir {
   if [ -t 1 ] && command -v pygmentize &> /dev/null ; then
-    local lexer
+    local lexer stylesheet
     zstyle -s ':plugins:mlir:pygments' lexer lexer
     lexer=${1:-${MLIR_OPT_PYGMENTS_LEXER:-${lexer:-$(__default_mlir_lexer)}}}
     zstyle -s ':plugins:mlir:pygments' stylesheet stylesheet

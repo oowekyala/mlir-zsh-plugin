@@ -69,3 +69,24 @@ If you don't want to use your system installation, you can create a virtual envi
 (specifically change the `__mlir_opt_comp_helper_call` function) to use that executable.
 
 # Configuration
+
+Configuration is done mostly through zstyle. You have to set those _before_ you load the plugin 
+(ie, before you source your plugin manager script like `oh-my-zsh.sh`).
+
+
+If you use several programs that use the MLIR CLI, record them like so (default is just to use mlir-opt):
+```zsh
+zstyle ':plugins:mlir' mlir_opt_programs mlir-opt iree-opt cinm-opt 
+```
+Each of them will get completions for all the options they support. 
+
+Pygments wrapper configuration:
+```zsh
+# Disable this to remove the wrapper that colorizes mlir-opt output
+zstyle ':plugins:mlir:pygments' enabled 'yes'
+
+# Set a different lexer for pygments. If blank, the default lexer is used (see this repo py/MlirLexer.py)
+zstyle ':plugins:mlir:pygments' lexer '~/MyMlirLexer.py'
+# Set a different stylesheet for pygments (eg if you use dark colors in terminal)
+zstyle ':plugins:mlir:pygments' stylesheet github-dark
+```
