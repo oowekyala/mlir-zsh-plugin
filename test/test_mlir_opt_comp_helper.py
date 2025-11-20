@@ -58,3 +58,10 @@ def test_escape_value_description_that_has_paren(payload):
       if entry.startswith("complex-range"):
         assert entry == "complex-range[Control the intermediate calculation of complex number division]:complex-range value:((improved:improved basic:basic\\ \\(default\\) none:none))"
 
+def test_value_list_no_description(payload):
+    pass_opts = payload.pass_options.get("--one-shot-bufferize", "")
+    entries = pass_opts.split("\0") if pass_opts else []
+    assert entries, "expected pass options for --affine-loop-tile"
+    for entry in entries:
+      if entry.startswith("unknown-type-conversion"):
+        assert entry == "unknown-type-conversion[Controls layout maps for non-inferrable memref types.]:unknown-type-conversion value:(infer-layout-map identity-layout-map fully-dynamic-layout-map)"
