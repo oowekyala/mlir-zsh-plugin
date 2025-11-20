@@ -20,7 +20,7 @@ import hashlib
 from enum import Enum
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 
 DEFAULT_COMMAND = "tilefirst-opt"
@@ -124,40 +124,35 @@ class HelpState(Enum):
   GENERIC_OPTIONS = 4
 
   def new_state_on_header(self, header: str):
-    match header:
-      case "Generic Options:":
-        return HelpState.GENERIC_OPTIONS
-      case "General options:":
-        return HelpState.GENERAL_LLVM
-      case "IR2Vec Options:":
-        return HelpState.GENERAL_LLVM
-      case "Passes:":
-        return HelpState.MLIR_PASSES
-      case "Pass Pipelines:":
-        return HelpState.MLIR_PIPELINES
-      case "Color Options:":
-        return HelpState.GENERIC_OPTIONS
-      case _:
-        return self
+    return HEADER_TO_STATE.get(header, self)
 
   def category(self, opt_name: str):
-    match self:
-      case HelpState.GENERAL_LLVM:
+    if self == HelpState.GENERAL_LLVM:
         if opt_name.startswith("--mlir-"):
           return OptionCategory.MLIR_OPTION
         else:
           return OptionCategory.LLVM
-      case HelpState.MLIR_PASSES:
+    elif self == HelpState.MLIR_PASSES:
         return OptionCategory.MLIR_PASS
-      case HelpState.MLIR_PIPELINES:
+    elif self == HelpState.MLIR_PIPELINES:
         return OptionCategory.MLIR_PASS_PIPELINE
-      case HelpState.GENERIC_OPTIONS:
+    elif self == HelpState.GENERIC_OPTIONS:
         return OptionCategory.GENERIC
+
+
+HEADER_TO_STATE = {
+  "Generic Options:": HelpState.GENERIC_OPTIONS,
+  "General options:": HelpState.GENERAL_LLVM,
+  "IR2Vec Options:": HelpState.GENERAL_LLVM,
+  "Passes:": HelpState.MLIR_PASSES,
+  "Pass Pipelines:": HelpState.MLIR_PIPELINES,
+  "Color Options:": HelpState.GENERIC_OPTIONS,
+}
 
 
 def parse_help(text: str) -> List[OptionRecord]:
     options: List[OptionRecord] = []
-    current: Optional[PassOption | OptionRecord] = None
+    current: Optional[Union["PassOption", OptionRecord]] = None
     current_opt: Optional[OptionRecord] = None
     last_pass_indent: Optional[int] = None
     state: HelpState = HelpState.GENERAL_LLVM
@@ -246,7 +241,7 @@ def parse_help(text: str) -> List[OptionRecord]:
     return options
 
 
-def decode_option(option_part: str) -> tuple[str, str, str, str]:
+def decode_option(option_part: str) -> Tuple[str, str, str, str]:
     tokens = option_part.split()
     if not tokens:
         return "", "", "flag", ""
@@ -291,7 +286,7 @@ class ZshPayload:
 
 def build_payload(help_text: str) -> ZshPayload:
 
-    options: list[OptionRecord] = parse_help(help_text)
+    options: List[OptionRecord] = parse_help(help_text)
 
     return ZshPayload(
       option_specs = to_zsh_array(
@@ -336,7 +331,7 @@ def get_data(binary: str, use_cache: bool = True) -> ZshPayload:
       cached_checksum = bincache.get("checksum")
 
     help_text = run_help(binary)
-    checksum = hashlib.sha256(help_text.encode(), usedforsecurity=False)
+    checksum = hashlib.sha256(help_text.encode()).hexdigest()
 
     if cached_checksum != checksum or payload is None:
       payload = build_payload(help_text)
@@ -353,7 +348,7 @@ def get_data(binary: str, use_cache: bool = True) -> ZshPayload:
 def esc(s, d=1):
   return s.replace(':', '\\' * d + ':')
 
-def option_to_values(opt: OptionRecord | PassOption) -> Tuple[str, str]:
+def option_to_values(opt: Union[OptionRecord, PassOption]) -> Tuple[str, str]:
   hint = opt.value_hint or ""
   hint = hint.lstrip('<').rstrip('>')
   if hint == "value":

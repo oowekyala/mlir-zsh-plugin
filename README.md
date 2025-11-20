@@ -21,7 +21,7 @@ This plugin fixes this by parsing the help text accurately, filtering out LLVM f
 
 # Installation
 
-Unlike nearly all ZSH plugins, this one has a dependency on Python 3.10+, so be aware of that.
+Unlike nearly all ZSH plugins, this one has a dependency on Python 3.8+, so be aware of that.
 
 To use the pygments syntax highlighter, you also need to install [Pygments](https://pygments.org/). 
 Many Linux distributions (and Homebrew for Mac) ship it as a package named `pygments` or `python-pygments` with their package manager.
