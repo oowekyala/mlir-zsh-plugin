@@ -15,7 +15,11 @@ autoload -Uz __find_mlir_opt_cmd
 
 # A function to wrap an MLIR frontend command with colorized output.
 function wrap_mlir_opt_with_colors() {
-  command "$@" | pygmentize_mlir
+  if (($@[(I)--help*])); then
+    command "$@"
+  else
+    command "$@" | pygmentize_mlir
+  fi
 }
 
 
