@@ -18,7 +18,6 @@ import subprocess
 import sys
 import hashlib
 from enum import Enum
-from datetime import date
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
@@ -89,16 +88,6 @@ def load_cache(path: Path) -> Optional[Dict[str, Any]]:
             return json.load(fh)
     except Exception:
         return None
-
-def prune_cache(cache: dict, today: date):
-  """Prune old entries from the cache"""
-  for k in cache:
-    if isinstance(cache[k], dict) and (last := cache[k].get('last_accessed')):
-      diff = today - date.fromisoformat(last)
-      if diff.days > 30:
-        del cache[k]
-    else:
-      cache[k]['last_accessed'] = today
 
 
 def save_cache(path: Path, payload: dict) -> None:
@@ -334,7 +323,6 @@ def get_data(binary: str, use_cache: bool = True) -> ZshPayload:
         mtime = None
 
     cached_checksum = None
-    today = date.today()
     payload = None
 
     # Match for the same binary
@@ -342,7 +330,7 @@ def get_data(binary: str, use_cache: bool = True) -> ZshPayload:
       payload = ZshPayload(**bincache["payload"])
 
       if bincache.get("mtime") == mtime:
-        # Binary identical
+        # Binary identical, no need to change the cache
         return payload
 
       cached_checksum = bincache.get("checksum")
@@ -356,10 +344,8 @@ def get_data(binary: str, use_cache: bool = True) -> ZshPayload:
     cache[binary] = {
       "mtime": mtime,
       "checksum": checksum,
-      "last_accessed": today.isoformat(),
       "payload": asdict(payload),
     }
-    # prune_cache(cache, today)
     save_cache(cache_file, cache)
     return payload
 
