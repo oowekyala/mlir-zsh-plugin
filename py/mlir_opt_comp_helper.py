@@ -362,7 +362,7 @@ def option_to_values(opt: Union[OptionRecord, PassOption]) -> Tuple[str, str]:
         values = f"({' '.join(choice.value for choice in opt.choices)})"
     else:
         values = ' '.join(
-          choice.value + ':' + (esc(esc(choice.description.strip(), chars=' ()'), chars=':', d=2) or "no description")
+          choice.value + ':' + (esc(esc(choice.description.strip(), chars=' (`)'), chars=':', d=2) or "no description")
           for choice in opt.choices
         )
         values = f"(({values}))"
@@ -389,7 +389,7 @@ def to_zsh_optspec(opt: OptionRecord):
 
 
 def to_zsh_value(opt: PassOption):
-  descr = esc(opt.description, chars=':[]')
+  descr = esc(opt.description, chars=':[]`')
   if opt.style == 'flag':
     return f"{opt.name}[{descr}]"
 

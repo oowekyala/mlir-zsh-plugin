@@ -63,3 +63,7 @@ def test_value_list_no_description(payload):
 def test_value_list_descr_with_brackets(payload):
     entry = get_entry(payload, "--linalg-block-pack-matmul", "lhs-transpose-inner-blocks")
     assert entry == r"lhs-transpose-inner-blocks[Transpose LHS inner block layout \[mb\]\[kb\] -> \[kb\]\[mb\]]"
+
+def test_value_list_descr_with_backticks(payload):
+    entry = get_entry(payload, "--convert-vector-to-llvm", "vector-transpose-lowering")
+    assert entry == r"vector-transpose-lowering[control the lowering of \`vector.transpose\` operations.]:vector-transpose-lowering value:((eltwise:Lower\ transpose\ into\ element-wise\ extract\ and\ inserts\ \(default\) flat:Lower\ 2-D\ transpose\ to\ \`vector.flat_transpose\`,\ maps\ 1-1\ to\ LLVM\ matrix\ intrinsics shuffle1d:Lower\ 2-D\ transpose\ to\ \`vector.shuffle\`\ on\ 1-D\ vector. shuffle16x16:Lower\ 2-D\ transpose\ to\ \`vector.shuffle\`\ on\ 16x16\ vector.))"
