@@ -1,23 +1,9 @@
 # MLIR.plugin.zsh
 
 This plugins adds goodies for MLIR developers that use ZSH as their shell environment.
-- Accurate ZSH option completion for `mlir-opt` and other frontends using `MlirMain`
-- Automatic syntax highlighting of `mlir-opt` output in your terminal (requires `pygments`)
+- Accurate ZSH option completion for `mlir-opt` and other frontends using `MlirMain` (`iree-opt`, etc)
+- Syntax highlighting of `mlir-opt` output in your terminal (requires `pygments`)
 
-
-
-## Why you need this
-
-It was always possible in ZSH to write `compdef _gnu_generic mlir-opt` and have basic option completion for mlir-opt.
-However, `_gnu_generic` parses the help text of the program to generate completions, and the help text of mlir-opt has important quirks:
-- Many irrelevant LLVM options are included (more if you use `--help-hidden`)
-- Some useful MLIR flags that have long names (eg `--mlir-print-assume-verified`) are hidden in `--help-hidden`
-- Pass options are included as flags in the completion (eg `--tile-size`) even though they must use special syntax (eg `--affine-loop-tile=tile-size=8`)
-- Options that have a specific set of values are not understood.
-
-In these cases you often have to resort to read the help text yourself, which is made difficult by the number of irrelevant switches, the inaccurate syntax shown for pass options, and formatting quirks such as option values being rendered always at indent level 4, regardless of the indentation level of the option description.
-
-This plugin fixes this by parsing the help text accurately, filtering out LLVM flags, and emitting complete ZSH completions for passes and pass options.
 
 # Installation
 
@@ -31,20 +17,20 @@ pygmentize -V
 ```
 If not, install using one of those for instance:
 ```zsh
-pamac install python-pygments # Manjaro
 sudo apt install pygments # Ubuntu
+sudo pacman -S python-pygments # Arch
 brew install pygments # MacOs with Homebrew
 pip install Pygments # Any OS with a global pip
 ```
 
-### Oh-My-Zsh
+### [Oh-My-Zsh](https://ohmyz.sh/)
 
 ```zsh
 git clone https://github.com/oowekyala/mlir-zsh-plugin.git "$ZSH_CUSTOM/plugins/mlir"
 ```
-Then add `mlir` to your `plugins` array in your `.zshrc`.
+Then add `mlir` to your [`plugins` array](https://github.com/ohmyzsh/ohmyzsh#enabling-plugins) in your `.zshrc`.
 
-### Antidote
+### [Antidote](https://antidote.sh/)
 
 Add the line
 ```
@@ -90,3 +76,16 @@ zstyle ':plugins:mlir:pygments' lexer '~/MyMlirLexer.py'
 # Set a different stylesheet for pygments (eg if you use dark colors in terminal)
 zstyle ':plugins:mlir:pygments' stylesheet github-dark
 ```
+
+# Why you need this
+
+It was always possible in ZSH to write `compdef _gnu_generic mlir-opt` and have basic option completion for mlir-opt.
+However, `_gnu_generic` parses the help text of the program to generate completions, and the help text of mlir-opt has important quirks:
+- Many irrelevant LLVM options are included (more if you use `--help-hidden`)
+- Some useful MLIR flags that have long names (eg `--mlir-print-assume-verified`) are hidden in `--help-hidden`
+- Pass options are included as flags in the completion (eg `--tile-size`) even though they must use special syntax (eg `--affine-loop-tile=tile-size=8`)
+- Options that have a specific set of values are not understood.
+
+In these cases you often have to resort to read the help text yourself, which is made difficult by the number of irrelevant switches, the inaccurate syntax shown for pass options, and formatting quirks such as option values being rendered always at indent level 4, regardless of the indentation level of the option description.
+
+This plugin fixes this by parsing the help text accurately, filtering out LLVM flags, and emitting complete ZSH completions for passes and pass options.
