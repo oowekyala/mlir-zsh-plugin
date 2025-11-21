@@ -5,7 +5,7 @@
 
 __default_mlir_lexer() {
     if (( $+functions_source[pygmentize_mlir] )); then
-        local src=${functions_source[pygmentize_mlir]}
+        local src=${functions_source[wrap_mlir_opt]}
         if [[ -n $src ]]; then
             print -r -- "${src:h}/py/MlirLexer.py"
             return 0
@@ -13,7 +13,7 @@ __default_mlir_lexer() {
     fi
 }
 
-#function pygmentize_mlir {
+function pygmentize_mlir() {
   if [ -t 1 ] && command -v pygmentize &> /dev/null ; then
     local lexer stylesheet
     zstyle -s ':plugins:mlir:pygments' lexer lexer
@@ -26,4 +26,21 @@ __default_mlir_lexer() {
     # just passthrough.
     cat /dev/stdin > /dev/stdout
   fi
+}
+
+# function wrap_mlir_opt() {
+if ! [ -t 1 ] || ! zstyle -T ':plugins:mlir:pygments' enabled || (($@[(I)--help*])); then
+  command "$@"
+else 
+  # Add some arguments to not break terminal when dealing with large constants
+  local args=($@)
+  if ! (($args[(I)--mlir-elide-resource-strings-if-larger*])); then
+    args+=(--mlir-elide-resource-strings-if-larger 60)
+  fi
+  if ! (($args[(I)--mlir-elide-elementsattrs-if-larger*])); then
+    args+=(--mlir-elide-elementsattrs-if-larger 60)
+  fi
+
+  command "${args[@]}" | pygmentize_mlir
+fi
 # }
