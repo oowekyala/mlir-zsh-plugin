@@ -3,11 +3,15 @@
 This plugins adds goodies for MLIR developers that use ZSH as their shell environment.
 - Accurate ZSH option completion for `mlir-opt` and other frontends using `MlirMain` (`iree-opt`, etc)
 - Syntax highlighting of `mlir-opt` output in your terminal (requires `pygments`)
+- Elision of large resources/constants by default
 
+The last two features are only enabled when in a terminal. If you pipe the output of the command to a file, the file will contain the full output without colors.
+
+![demo gif](demo.gif)
 
 # Installation
 
-Unlike nearly all ZSH plugins, this one has a dependency on Python 3.8+, so be aware of that.
+This plugin depends on Python 3.8+.
 
 To use the pygments syntax highlighter, you also need to install [Pygments](https://pygments.org/). 
 Many Linux distributions (and Homebrew for Mac) ship it as a package named `pygments` or `python-pygments` with their package manager.
