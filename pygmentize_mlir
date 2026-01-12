@@ -1,0 +1,29 @@
+#!/bin/zsh
+
+# A function to colorize MLIR code such as the output of mlir-opt commands.
+# There is a default lexer, you can modify it to include syntax for your own dialects.
+
+__default_mlir_lexer() {
+    if (( $+functions_source[pygmentize_mlir] )); then
+        local src=${functions_source[pygmentize_mlir]}
+        if [[ -n $src ]]; then
+            print -r -- "${src:h}/py/MlirLexer.py"
+            return 0
+        fi
+    fi
+}
+
+# function pygmentize_mlir() {
+  if [ -t 1 ] && command -v pygmentize &> /dev/null ; then
+    local lexer stylesheet
+    zstyle -s ':plugins:mlir:pygments' lexer lexer
+    lexer=${1:-${MLIR_OPT_PYGMENTS_LEXER:-${lexer:-$(__default_mlir_lexer)}}}
+    zstyle -s ':plugins:mlir:pygments' stylesheet stylesheet
+
+    pygmentize -l "$lexer" -x ${stylesheet:+-O "style=$stylesheet"} /dev/stdin
+  else
+    # If we're not in a term (eg we are piping to another command),
+    # just passthrough.
+    cat /dev/stdin > /dev/stdout
+  fi
+# }

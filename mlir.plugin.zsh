@@ -11,6 +11,7 @@ zstyle -a ':plugins:mlir' mlir_opt_programs mlir_opt_programs
 ((${mlir_opt_programs:=mlir-opt})) # default value
 
 autoload -Uz wrap_mlir_opt
+autoload -Uz pygmentize_mlir
 
 for prog in ${mlir_opt_programs[@]}; do
   if zstyle -T ':plugins:mlir:pygments' enabled; then
