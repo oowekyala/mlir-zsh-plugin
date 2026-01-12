@@ -55,7 +55,7 @@ hex_digit = r'[0-9a-fA-F]'
 letter = r'[a-zA-Z]'
 id_punct = r'[$._\-]'
 
-decimal_literal = rf'{digit}+'
+decimal_literal = rf'-?{digit}+'
 hexadecimal_literal = rf'0x{hex_digit}+'
 float_literal = r'[-+]?[0-9]+[.][0-9]*([eE][-+]?[0-9]+)?'
 string_literal = r'"[^"\n\f\v\r]*"'
