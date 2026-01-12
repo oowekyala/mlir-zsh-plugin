@@ -4,7 +4,7 @@
 # There is a default lexer, you can modify it to include syntax for your own dialects.
 
 __default_mlir_lexer() {
-    if (( $+functions_source[pygmentize_mlir] )); then
+    if (( $+functions_source[wrap_mlir_opt] )); then
         local src=${functions_source[wrap_mlir_opt]}
         if [[ -n $src ]]; then
             print -r -- "${src:h}/py/MlirLexer.py"
