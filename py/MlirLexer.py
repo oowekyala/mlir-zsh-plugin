@@ -123,7 +123,7 @@ class CustomLexer(RegexLexer):
 
         'builtin_ops': [
             (r'\b(module|return)\b', Name.Function),
-            (r'\b(attributes|to|with|upto)\b', Keyword.Declaration),
+            (r'\b(attributes|to|with|upto|iter_args|in|step)\b', Keyword.Declaration),
         ],
 
         'root': [
