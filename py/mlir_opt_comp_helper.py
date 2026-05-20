@@ -117,6 +117,14 @@ def run_help(binary: str) -> str:
         ) from exc
     return completed.stdout
 
+_preserved_mlir_options = [
+        "--split-input-file",
+        "--allow-unregistered-dialect",
+        "--debug",
+        "--debug-only"
+]
+
+
 class HelpState(Enum):
   GENERAL_LLVM = 1
   MLIR_PASSES = 2
@@ -128,7 +136,7 @@ class HelpState(Enum):
 
   def category(self, opt_name: str):
     if self == HelpState.GENERAL_LLVM:
-        if opt_name.startswith("--mlir-"):
+        if opt_name.startswith("--mlir-") or opt_name in _preserved_mlir_options:
           return OptionCategory.MLIR_OPTION
         else:
           return OptionCategory.LLVM
