@@ -33,7 +33,7 @@ __mlir_opt_comp_helper_call() {
     fi
     # args+=(--no-cache)
     args+=("$@")
-    python "$helper" "${args[@]}"
+    python3 "$helper" "${args[@]}"
 }
 
 __mlir_opt_comp_pass_options() {
