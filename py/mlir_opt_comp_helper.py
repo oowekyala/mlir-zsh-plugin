@@ -375,9 +375,9 @@ def option_to_values(opt: Union[OptionRecord, PassOption]) -> Tuple[str, str]:
         )
         values = f"(({values}))"
   elif hint in ("number", "int", "long"):
-    values = "_numbers"
+    values = "{_numbers}"
   elif hint in ("uint", "ulong"):
-    values = "_numbers -l 0"
+    values = "{_numbers -l 0}"
   else:
     values = ""
 
